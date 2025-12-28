@@ -24,15 +24,15 @@ jobs:
     - name: Select ESP32 target
       run: idf.py set-target esp32
 
-    # 🔥 IMPORTANT FIX — increase bootloader offset
-    - name: Apply safe bootloader offset (0x10000)
+    # 🟢 Force clean config + apply bootloader offset
+    - name: Apply safe bootloader offset (0x10000) and clean cache
       run: |
+        rm -f sdkconfig sdkconfig.old
         echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x10000" >> sdkconfig.defaults
         echo "CONFIG_PARTITION_TABLE_OFFSET=0x8000" >> sdkconfig.defaults
-        echo "CONFIG_SECURE_BOOTLOADER_ONE_TIME_FLASH= n" >> sdkconfig.defaults
 
-    - name: Build firmware
-      run: idf.py build -DSDKCONFIG_DEFAULTS=sdkconfig.defaults
+    - name: Build firmware (full clean)
+      run: idf.py fullclean build -DSDKCONFIG_DEFAULTS=sdkconfig.defaults
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
