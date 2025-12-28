@@ -15,10 +15,13 @@ jobs:
       - name: Install ESP-IDF
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v4.4
+          esp_idf_version: v4.4.4
 
       - name: Select target
         run: idf.py set-target esp32
+
+      - name: Configure (safe defaults for first build)
+        run: idf.py reconfigure
 
       - name: Build firmware
         run: idf.py build
