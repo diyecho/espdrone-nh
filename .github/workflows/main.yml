@@ -28,8 +28,8 @@ jobs:
     - name: Apply bootloader offset and regenerate sdkconfig
       run: |
         rm -f sdkconfig sdkconfig.old
-        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x10000" >> sdkconfig.defaults
-        echo "CONFIG_PARTITION_TABLE_OFFSET=0x8000" >> sdkconfig.defaults
+        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig.defaults
+        echo "CONFIG_PARTITION_TABLE_OFFSET=0x10000" >> sdkconfig.defaults
         idf.py reconfigure
 
     - name: Show effective sdkconfig
