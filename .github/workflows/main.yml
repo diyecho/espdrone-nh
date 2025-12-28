@@ -1,3 +1,4 @@
+
 name: ESP32 Drone Build
 
 on:
@@ -11,18 +12,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install ESP-IDF
+      # Install ESP-IDF 4.4.4 ONLY (no auto-resolve)
+      - name: Install ESP-IDF 4.4.4
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v4.4.4
+          extra_components: ""   # disable auto dependency fetch
 
-      - name: Select target
+      - name: Verify IDF Version
+        run: idf.py --version
+
+      - name: Select ESP32 target
         run: idf.py set-target esp32
 
-      # Use default partition table to avoid bootloader size error
-      - name: Apply default partition table
+      # Force safe partition + sdkconfig before build
+      - name: Apply build defaults
         run: |
-          echo 'CONFIG_PARTITION_TABLE_SINGLE_APP=y' >> sdkconfig.defaults
+          echo 'CONFIG_PARTITION_TABLE_SINGLE_APP=y' > sdkconfig.defaults
           echo 'CONFIG_PARTITION_TABLE_OFFSET=0x8000' >> sdkconfig.defaults
           idf.py reconfigure
 
