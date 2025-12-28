@@ -1,4 +1,3 @@
-
 name: ESP32 Drone Build
 
 on:
@@ -12,12 +11,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Install ESP-IDF 4.4.4 ONLY (no auto-resolve)
+      # Install ESP-IDF 4.4.4 (project was written for this)
       - name: Install ESP-IDF 4.4.4
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v4.4.4
-          extra_components: ""   # disable auto dependency fetch
 
       - name: Verify IDF Version
         run: idf.py --version
@@ -25,11 +23,23 @@ jobs:
       - name: Select ESP32 target
         run: idf.py set-target esp32
 
-      # Force safe partition + sdkconfig before build
-      - name: Apply build defaults
+      # *** FIX BOOTLOADER SIZE ERROR ***
+      # Force larger partition offset BEFORE build
+      - name: Force larger bootloader partition offset
         run: |
-          echo 'CONFIG_PARTITION_TABLE_SINGLE_APP=y' > sdkconfig.defaults
-          echo 'CONFIG_PARTITION_TABLE_OFFSET=0x8000' >> sdkconfig.defaults
+          # Ensure sdkconfig exists
+          touch sdkconfig
+
+          # Replace old offset if present
+          sed -i 's/CONFIG_PARTITION_TABLE_OFFSET=0x8000/CONFIG_PARTITION_TABLE_OFFSET=0x9000/' sdkconfig || true
+
+          # Make sure offset is present
+          grep -q "CONFIG_PARTITION_TABLE_OFFSET" sdkconfig || echo "CONFIG_PARTITION_TABLE_OFFSET=0x9000" >> sdkconfig
+
+          # Keep normal bootloader start
+          grep -q "CONFIG_BOOTLOADER_OFFSET_IN_FLASH" sdkconfig || echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig
+
+          # Reconfigure project with new values
           idf.py reconfigure
 
       - name: Build firmware
