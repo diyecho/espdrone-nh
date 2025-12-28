@@ -8,44 +8,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: true
 
-      # Install ESP-IDF 4.4.4 (project was designed for this)
-      - name: Install ESP-IDF 4.4.4
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v4.4.4
+    - name: Install ESP-IDF 4.4.4
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v4.4.4
 
-      - name: Verify IDF Version
-        run: idf.py --version
+    - name: Verify IDF Version
+      run: idf.py --version
 
-      - name: Select ESP32 target
-        run: idf.py set-target esp32
+    - name: Select ESP32 target
+      run: idf.py set-target esp32
 
-      # --- FINAL FIX: shrink bootloader so it fits default offset ---
-      - name: Enable small / size-optimized bootloader (clean rebuild)
-        run: |
-          touch sdkconfig
+    # 🔥 IMPORTANT FIX — increase bootloader offset
+    - name: Apply safe bootloader offset (0x10000)
+      run: |
+        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x10000" >> sdkconfig.defaults
+        echo "CONFIG_PARTITION_TABLE_OFFSET=0x8000" >> sdkconfig.defaults
+        echo "CONFIG_SECURE_BOOTLOADER_ONE_TIME_FLASH= n" >> sdkconfig.defaults
 
-          # force tiny bootloader mode to fit under 0x7000
-          echo 'CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_SIZE=y' >> sdkconfig
-          echo 'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y' >> sdkconfig
-          echo 'CONFIG_BOOTLOADER_WDT_DISABLE_IN_USER_CODE=y' >> sdkconfig
-          echo 'CONFIG_BOOTLOADER_OTA_DATA_ERASE=y' >> sdkconfig
+    - name: Build firmware
+      run: idf.py build -DSDKCONFIG_DEFAULTS=sdkconfig.defaults
 
-          # wipe old cached bootloader + re-apply config
-          idf.py fullclean
-          idf.py reconfigure
-
-      - name: Build firmware
-        run: idf.py build
-
-      - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: esp32-drone-firmware
-          path: |
-            build/*.bin
-            build/*.elf
-            build/*.map
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp32-firmware
+        path: |
+          build/*.bin
+          build/*.elf
+          build/*.map
