@@ -11,7 +11,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Install ESP-IDF 4.4.4 (project was written for this)
+      # Install ESP-IDF 4.4.4 (project was designed for this)
       - name: Install ESP-IDF 4.4.4
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -23,25 +23,18 @@ jobs:
       - name: Select ESP32 target
         run: idf.py set-target esp32
 
-      # --- FIX BOOTLOADER SIZE ERROR ---
-      # Provide custom partition table + force clean rebuild
-      - name: Apply custom partition table (fix bootloader size)
+      # --- FINAL FIX: shrink bootloader so it fits default offset ---
+      - name: Enable small / size-optimized bootloader (clean rebuild)
         run: |
-          # Write custom partition layout
-          cat > partitions.csv <<'EOF'
-          # Name,   Type, SubType, Offset,  Size,   Flags
-          nvs,      data, nvs,      0x9000,  0x5000,
-          phy_init, data, phy,      0xE000,  0x1000,
-          factory,  app,  factory,  0x10000, 1M,
-          EOF
+          touch sdkconfig
 
-          # Tell IDF to use our partition file
-          echo 'CONFIG_PARTITION_TABLE_CUSTOM=y' >> sdkconfig
-          echo 'CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"' >> sdkconfig
-          echo 'CONFIG_PARTITION_TABLE_OFFSET=0x9000' >> sdkconfig
-          echo 'CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000' >> sdkconfig
+          # force tiny bootloader mode to fit under 0x7000
+          echo 'CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_SIZE=y' >> sdkconfig
+          echo 'CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y' >> sdkconfig
+          echo 'CONFIG_BOOTLOADER_WDT_DISABLE_IN_USER_CODE=y' >> sdkconfig
+          echo 'CONFIG_BOOTLOADER_OTA_DATA_ERASE=y' >> sdkconfig
 
-          # Clean cached bootloader + reconfigure
+          # wipe old cached bootloader + re-apply config
           idf.py fullclean
           idf.py reconfigure
 
