@@ -11,7 +11,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Install ESP-IDF 4.4.4 (project was written for this)
+      # Install ESP-IDF 4.4.4 (matches project)
       - name: Install ESP-IDF 4.4.4
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -24,22 +24,21 @@ jobs:
         run: idf.py set-target esp32
 
       # *** FIX BOOTLOADER SIZE ERROR ***
-      # Force larger partition offset BEFORE build
-      - name: Force larger bootloader partition offset
+      # Force larger partition offset + clean old cached build
+      - name: Force larger bootloader partition offset (clean rebuild)
         run: |
-          # Ensure sdkconfig exists
+          # ensure sdkconfig exists
           touch sdkconfig
 
-          # Replace old offset if present
+          # update / insert new partition offset
           sed -i 's/CONFIG_PARTITION_TABLE_OFFSET=0x8000/CONFIG_PARTITION_TABLE_OFFSET=0x9000/' sdkconfig || true
-
-          # Make sure offset is present
           grep -q "CONFIG_PARTITION_TABLE_OFFSET" sdkconfig || echo "CONFIG_PARTITION_TABLE_OFFSET=0x9000" >> sdkconfig
 
-          # Keep normal bootloader start
+          # normal bootloader base
           grep -q "CONFIG_BOOTLOADER_OFFSET_IN_FLASH" sdkconfig || echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig
 
-          # Reconfigure project with new values
+          # *** critical step — wipe cached bootloader ***
+          idf.py fullclean
           idf.py reconfigure
 
       - name: Build firmware
