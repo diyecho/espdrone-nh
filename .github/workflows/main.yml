@@ -1,3 +1,4 @@
+
 name: ESP32 Drone Build
 
 on:
@@ -14,7 +15,7 @@ jobs:
       - name: Install ESP-IDF
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.1
+          esp_idf_version: v4.4
 
       - name: Select target
         run: idf.py set-target esp32
