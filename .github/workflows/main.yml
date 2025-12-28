@@ -18,26 +18,6 @@ jobs:
       with:
         esp_idf_version: v4.4.4
 
-    - name: Verify IDF Version
-      run: idf.py --version
-
-    - name: Select ESP32 target
-      run: idf.py set-target esp32
-
-    # 🔥 Force correct bootloader offset & clean cache
-    - name: Apply bootloader offset and regenerate sdkconfig
-      run: |
-        rm -f sdkconfig sdkconfig.old
-        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig.defaults
-        echo "CONFIG_PARTITION_TABLE_OFFSET=0x10000" >> sdkconfig.defaults
-        idf.py reconfigure
-
-    - name: Show effective sdkconfig
-      run: grep BOOTLOADER_OFFSET sdkconfig || true
-
-    - name: Build firmware (clean)
-      run: idf.py fullclean build
-
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
