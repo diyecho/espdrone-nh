@@ -24,25 +24,19 @@ jobs:
     - name: Select ESP32 target
       run: idf.py set-target esp32
 
-    # 🟡 Diagnostic — show which config file is used
-    - name: Show sdkconfig files
-      run: |
-        echo "== Repository root =="
-        ls -l
-        echo "== Build folder (if exists) =="
-        ls -l build || true
-        echo "== Searching for CONFIG_PARTITION_TABLE_OFFSET =="
-        grep -n "CONFIG_PARTITION_TABLE_OFFSET" -r . || true
-
-    # 🟢 Apply correct bootloader/partition layout + clean cache
-    - name: Apply correct partition offset and clear cached sdkconfig
+    # 🔥 Force correct bootloader offset & clean cache
+    - name: Apply bootloader offset and regenerate sdkconfig
       run: |
         rm -f sdkconfig sdkconfig.old
-        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig.defaults
-        echo "CONFIG_PARTITION_TABLE_OFFSET=0x10000" >> sdkconfig.defaults
+        echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x10000" >> sdkconfig.defaults
+        echo "CONFIG_PARTITION_TABLE_OFFSET=0x8000" >> sdkconfig.defaults
+        idf.py reconfigure
 
-    - name: Build firmware (full clean)
-      run: idf.py fullclean build -DSDKCONFIG_DEFAULTS=sdkconfig.defaults
+    - name: Show effective sdkconfig
+      run: grep BOOTLOADER_OFFSET sdkconfig || true
+
+    - name: Build firmware (clean)
+      run: idf.py fullclean build
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
