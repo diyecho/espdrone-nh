@@ -11,7 +11,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Install ESP-IDF 4.4.4 (matches project)
+      # Install ESP-IDF 4.4.4 (project was written for this)
       - name: Install ESP-IDF 4.4.4
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -23,21 +23,25 @@ jobs:
       - name: Select ESP32 target
         run: idf.py set-target esp32
 
-      # *** FIX BOOTLOADER SIZE ERROR ***
-      # Force larger partition offset + clean old cached build
-      - name: Force larger bootloader partition offset (clean rebuild)
+      # --- FIX BOOTLOADER SIZE ERROR ---
+      # Provide custom partition table + force clean rebuild
+      - name: Apply custom partition table (fix bootloader size)
         run: |
-          # ensure sdkconfig exists
-          touch sdkconfig
+          # Write custom partition layout
+          cat > partitions.csv <<'EOF'
+          # Name,   Type, SubType, Offset,  Size,   Flags
+          nvs,      data, nvs,      0x9000,  0x5000,
+          phy_init, data, phy,      0xE000,  0x1000,
+          factory,  app,  factory,  0x10000, 1M,
+          EOF
 
-          # update / insert new partition offset
-          sed -i 's/CONFIG_PARTITION_TABLE_OFFSET=0x8000/CONFIG_PARTITION_TABLE_OFFSET=0x9000/' sdkconfig || true
-          grep -q "CONFIG_PARTITION_TABLE_OFFSET" sdkconfig || echo "CONFIG_PARTITION_TABLE_OFFSET=0x9000" >> sdkconfig
+          # Tell IDF to use our partition file
+          echo 'CONFIG_PARTITION_TABLE_CUSTOM=y' >> sdkconfig
+          echo 'CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"' >> sdkconfig
+          echo 'CONFIG_PARTITION_TABLE_OFFSET=0x9000' >> sdkconfig
+          echo 'CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000' >> sdkconfig
 
-          # normal bootloader base
-          grep -q "CONFIG_BOOTLOADER_OFFSET_IN_FLASH" sdkconfig || echo "CONFIG_BOOTLOADER_OFFSET_IN_FLASH=0x1000" >> sdkconfig
-
-          # *** critical step — wipe cached bootloader ***
+          # Clean cached bootloader + reconfigure
           idf.py fullclean
           idf.py reconfigure
 
